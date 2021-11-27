@@ -1,5 +1,5 @@
 # rmrk_spy_bot
-RMRK spy bot for rmrk hacktoberfest https://rmrk.devpost.com/
+RMRK spy bot https://t.me/RMRKspyBot for rmrk hacktoberfest https://rmrk.devpost.com/
 
 1) Birds and items price and rarity estimation
 
