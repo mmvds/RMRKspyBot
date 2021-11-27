@@ -1,0 +1,5 @@
+cryptocompare
+psycopg2
+python-telegram-bot
+pyvips
+requests
