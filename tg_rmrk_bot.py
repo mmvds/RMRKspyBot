@@ -8,7 +8,7 @@ from tg_rmrk_config import *
 
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                     level=logging.WARNING)
+                    level=logging.WARNING)
 
 updater = Updater(token=tg_token, use_context=False)
 dispatcher = updater.dispatcher
