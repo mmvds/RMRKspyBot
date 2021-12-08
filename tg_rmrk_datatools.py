@@ -5,6 +5,7 @@ import random
 import json
 import psycopg2
 import cryptocompare
+import time
 from decimal import Decimal
 from tg_rmrk_collections import *
 from tg_rmrk_config import *
@@ -107,12 +108,19 @@ def fetch_metadata(db, nft_id, metadata_url):
     if db.rowcount != 0:
         nft_metadata = db.fetchone()[0]
     elif metadata_url:
-        try:
-            nft_metadata = requests.get(
-                metadata_url.replace(
-                    'ipfs://', ipfs_gateway_url)).json()
-        except BaseException:
-            nft_metadata = {}
+        attempts = 0
+        is_got_metadata = False
+        while attempts < 3 and not is_got_metadata:
+            try:
+                nft_metadata = requests.get(
+                    metadata_url.replace(
+                        'ipfs://', ipfs_gateway_url)).json()
+                is_got_metadata = True
+            except BaseException:
+                print(f"Can't get metadata for {nft_id}: {metadata_url}")
+                attempts += 1
+                time.sleep(3)
+                nft_metadata = {}
         if kanaria_birds_ids_str in nft_id:
             nft_metadata['image'] = requests.get(f'{kanaria_nft_api_url}{nft_id}').json()[
                 'image'] + f"?random={random.randint(0,42)}"
