@@ -376,7 +376,7 @@ WHERE  t1.block > {tg_lastblock_v2} AND t1.nft_id=t3.nft_id AND t3.version = 'v2
     for sold_message in sold_messages_list:
         sold_message[2] = sold_message[2].replace("'", "''")
         db.execute(
-            f"INSERT INTO tg_buy_messages(user_id, type, nft_id, price, block, metadata) VALUES ({sold_message[0]},'{sold_message[1]}','{sold_message[2]}',{sold_message[3]:.3f},{sold_message[4]},'{sold_message[5]}');")
+            f"INSERT INTO tg_buy_messages(user_id, type, nft_id, price, block, metadata) VALUES ({sold_message[0]},'{sold_message[1]}','{sold_message[2]}',{sold_message[3]:.3f},{sold_message[4]},'{sold_message[5]}') ON CONFLICT (user_id, nft_id, block) DO NOTHING;")
     conn.commit()
 
     # Collect Listed NFTs
@@ -431,7 +431,7 @@ WHERE  t1.block > {tg_lastblock_v2} AND t1.nft_id=t3.nft_id AND t3.version = 'v2
 
     for forsale_message in forsale_messages_list:
         db.execute(
-            f"INSERT INTO tg_forsale_messages(user_id, type, rarity, nft_id, price, block, metadata) VALUES ({forsale_message[0]},'{forsale_message[1]}','{forsale_message[2]}','{forsale_message[3]}',{forsale_message[4]:.3f},{forsale_message[5]},'{forsale_message[6]}');")
+            f"INSERT INTO tg_forsale_messages(user_id, type, rarity, nft_id, price, block, metadata) VALUES ({forsale_message[0]},'{forsale_message[1]}','{forsale_message[2]}','{forsale_message[3]}',{forsale_message[4]:.3f},{forsale_message[5]},'{forsale_message[6]}') ON CONFLICT (user_id, nft_id, block) DO NOTHING;")
     conn.commit()
 
 # Check dump updates
