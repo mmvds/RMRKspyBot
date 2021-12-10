@@ -34,8 +34,10 @@ CREATE TABLE tg_forsale (user_id bigint primary key, birds_forsale_any numeric(2
     items_forsale_rare numeric(25, 10), items_forsale_uncommon numeric(25, 10), items_forsale_common numeric(25, 10));
 CREATE TABLE tg_follows (user_id bigint, nft_id text, nft_name text, nft_url text, version text);
 CREATE TABLE tg_buy_messages (user_id bigint, type text, nft_id text, price numeric(25, 10), block integer, metadata text);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_user_nft_id_block_buy ON tg_buy_messages (user_id, nft_id, block);
 CREATE TABLE tg_block_history (block integer primary key, approx_time integer);
 CREATE TABLE tg_forsale_messages (user_id bigint, type text, rarity text, nft_id text, price numeric(25, 10), block integer, metadata text);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_user_nft_id_block_forsale ON tg_forsale_messages (user_id, nft_id, block);
 CREATE TABLE tg_changes_messages(user_id bigint, nft_id text, old text, new text, block integer, field text, optype text, metadata text, nft_url text, version text);
 CREATE TABLE tg_ksm_exchange_rate (ksm_exchange_rate numeric(25, 10));
 INSERT INTO tg_ksm_exchange_rate(ksm_exchange_rate) VALUES(100);
