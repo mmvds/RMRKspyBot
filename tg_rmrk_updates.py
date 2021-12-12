@@ -159,8 +159,9 @@ def update_birds_gems_items(conn, db, tg_lastblock_v1, tg_lastblock_v2):
         f"SELECT nft_id FROM tg_birds_info WHERE nft_id NOT IN (SELECT bird_id FROM tg_birds_gems_info);")
     new_birds_with_gems = [x[0] for x in db.fetchall()]
     for new_bird_with_gems in new_birds_with_gems:
+        print(f"New bird/gems changes were found! {new_bird_with_gems}")
         bird_gems_ids = bird_items_on_chain_block(
-            db, new_bird_with_gems, 'gems', lastblock_v2)
+            db, new_bird_with_gems, 'gems')
         db.execute(
             f"INSERT INTO tg_birds_gems_info(bird_id, gems, trait_score, trait_place) VALUES('{new_bird_with_gems}', '{json.dumps(bird_gems_ids)}',0,0);")
     conn.commit()
@@ -453,6 +454,8 @@ def check_update(bot, job):
     lastblock_v2 = max(lastblock_v2, tg_lastblock_v2)
     # If last block updated
     if tg_lastblock_v1 < lastblock_v1 or tg_lastblock_v2 < lastblock_v2:
+        db.execute(
+            'DELETE from  tg_nft_metadata WHERE metadata = \'{"image": ""}\';')
         db.execute(
             f"UPDATE tg_lastblocks SET lastblock_v1={lastblock_v1}, lastblock_v2={lastblock_v2};")
         db.execute(
