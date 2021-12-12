@@ -449,16 +449,17 @@ def check_update(bot, job):
     lastblock_v2 = db.fetchone()[0]
     db.execute("SELECT * FROM tg_lastblocks;")
     tg_lastblock_v1, tg_lastblock_v2 = db.fetchone()
-
+    lastblock_v1 = max(lastblock_v1, tg_lastblock_v1)
+    lastblock_v2 = max(lastblock_v2, tg_lastblock_v2)
     # If last block updated
-    if tg_lastblock_v1 != lastblock_v1 or tg_lastblock_v2 != lastblock_v2:
-        update_changed_birds(conn, db, tg_lastblock_v1, tg_lastblock_v2)
-        update_birds_gems_items(conn, db, tg_lastblock_v1, tg_lastblock_v2)
-        update_records(conn, db, bot, tg_lastblock_v1, tg_lastblock_v2)
-        update_nft_changes(conn, db, tg_lastblock_v1, tg_lastblock_v2)
+    if tg_lastblock_v1 < lastblock_v1 or tg_lastblock_v2 < lastblock_v2:
         db.execute(
             f"UPDATE tg_lastblocks SET lastblock_v1={lastblock_v1}, lastblock_v2={lastblock_v2};")
         db.execute(
             f"INSERT INTO tg_block_history(block, approx_time) VALUES({max(lastblock_v1, lastblock_v2)}, {curr_time}) ON CONFLICT (block) DO NOTHING;")
         conn.commit()
+        update_changed_birds(conn, db, tg_lastblock_v1, tg_lastblock_v2)
+        update_birds_gems_items(conn, db, tg_lastblock_v1, tg_lastblock_v2)
+        update_records(conn, db, bot, tg_lastblock_v1, tg_lastblock_v2)
+        update_nft_changes(conn, db, tg_lastblock_v1, tg_lastblock_v2)
     conn.close()
