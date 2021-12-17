@@ -3,6 +3,20 @@ from tg_rmrk_collections import *
 from tg_rmrk_datatools import to_ksm
 from tg_rmrk_config import *
 
+# Find twin birds
+
+
+def find_twin_birds(db, nft_id):
+    db.execute(
+        f"SELECT t2.nft_id FROM tg_birds_info t1, tg_birds_info t2 WHERE t1.nft_id = '{nft_id}' AND t1.nft_id != t2.nft_id AND t1.rarity = t2.rarity AND t1.theme = t2.theme AND t1.head = t2.head AND t1.eyes = t2.eyes AND t1.body = t2.body AND t1.tail = t2.tail AND t1.wingleft = t2.wingleft AND t1.wingright = t2.wingright AND t1.feet = t2.feet AND t1.resource_amount = t2.resource_amount;")
+    twin_birds = {}
+    if db.rowcount > 0:
+        for twin_nft_id in db.fetchall():
+            db.execute(
+                f"SELECT sn::int from nfts_v2 where id = '{twin_nft_id[0]}';")
+            twin_birds[db.fetchone()[0]] = twin_nft_id[0]
+    return twin_birds
+
 # Item price estimation
 
 
@@ -201,6 +215,15 @@ def estimate_bird(db, nft_id, estimation_type="full"):
             send_text += f"/estimate_{serial_number}\n"
         if estimation_type not in ("full", "channel"):
             send_text += f"/estimate_full_{serial_number}\n"
+
+        twin_birds = find_twin_birds(db, nft_id)
+        if twin_birds and estimation_type != "header":
+            send_text += f"\n<b>Twins:</b>\n"
+            for twin_bird in twin_birds:
+                send_text += f"<a href='{kanaria_market_url}{twin_birds[twin_bird]}'>Bird_{twin_bird}</a> "
+                if estimation_type != "channel":
+                    send_text += f"/estimate_full_{twin_bird}"
+                send_text += '\n'
 
     return send_text, total_birds_min + total_items_min, total_birds_max + \
         total_items_max, total_birds_avg + total_items_avg
