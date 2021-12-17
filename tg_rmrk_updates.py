@@ -45,9 +45,7 @@ def update_birds_gems_items(conn, db, tg_lastblock_v1, tg_lastblock_v2):
         f"SELECT id, metadata FROM nfts_v2 WHERE burned!='true' AND collection IN ('{kanaria_birds_ids_str}') AND id NOT IN (SELECT nft_id FROM tg_birds_info) ORDER by id LIMIT 100;")
     new_birds = db.fetchall()
     for new_bird in new_birds:
-        print(new_bird)
         nft_metadata = fetch_metadata(db, new_bird[0], new_bird[1])
-
         if 'properties' in nft_metadata:
             nft_rarity = nft_metadata['properties']['rarity']['value'].strip(
             ).lower()
@@ -74,11 +72,16 @@ def update_birds_gems_items(conn, db, tg_lastblock_v1, tg_lastblock_v2):
                     bird_part_value, bird_part_type = [
                         x.lower() for x in bird_resource_part.split("_")]
                     if bird_part_type in (
-                            "head", "eyes", "body", "tail", "wingleft", "wingright", "footleft"):
+                        "head",
+                        "eyes",
+                        "body",
+                        "tail",
+                        "wingleft",
+                        "wingright",
+                            "footleft"):
                         if not bird_parts_dict.get(bird_part_type, ""):
                             bird_parts_dict[bird_part_type] = bird_part_value
 
-        print(bird_parts_dict)
         db.execute(
             f"INSERT INTO tg_birds_info(nft_id, rarity, theme, name, head, eyes, body, tail, wingleft, wingright, feet, resource_amount, trait_score, trait_place) VALUES('{new_bird[0]}', '{nft_rarity}','{nft_theme}','{nft_name}','{bird_parts_dict['head']}','{bird_parts_dict['eyes']}','{bird_parts_dict['body']}','{bird_parts_dict['tail']}','{bird_parts_dict['wingleft']}','{bird_parts_dict['wingright']}','{bird_parts_dict['footleft']}',{len(bird_resources)},0,0);")
     conn.commit()
@@ -91,8 +94,17 @@ def update_birds_gems_items(conn, db, tg_lastblock_v1, tg_lastblock_v2):
         total_birds = 0.0
         total_birds_dict = {}
         birds_score_dict = {}
-        for trait_type in ('rarity', 'theme', 'head', 'eyes', 'body',
-                           'tail', 'wingleft', 'wingright', 'feet', 'resource_amount'):
+        for trait_type in (
+            'rarity',
+            'theme',
+            'head',
+            'eyes',
+            'body',
+            'tail',
+            'wingleft',
+            'wingright',
+            'feet',
+                'resource_amount'):
             total_birds_dict[trait_type] = {}
 
         # Calculate trait amounts
@@ -192,8 +204,8 @@ def update_birds_gems_items(conn, db, tg_lastblock_v1, tg_lastblock_v2):
                     gems_score_dict[bird_gems_info[0]] += (10 * float(
                         total_gems / total_gems_dict[gem_collection]))
                 elif 'KANGEMBRGI' in gem_collection:
-                    gems_score_dict[bird_gems_info[0]] += (
-                        3 * float(total_gems / total_gems_dict[gem_collection]))
+                    gems_score_dict[bird_gems_info[0]] += (3 * float(
+                        total_gems / total_gems_dict[gem_collection]))
                 else:
                     gems_score_dict[bird_gems_info[0]
                                     ] += float(total_gems / total_gems_dict[gem_collection])
@@ -216,7 +228,9 @@ def update_birds_gems_items(conn, db, tg_lastblock_v1, tg_lastblock_v2):
                                     ] = bird_common_rates[1]
         top_place = 0
         for bird_nft_id in sorted(
-                birds_common_rates_dict, key=birds_common_rates_dict.get, reverse=True):
+                birds_common_rates_dict,
+                key=birds_common_rates_dict.get,
+                reverse=True):
             top_place += 1
             db.execute(
                 f"UPDATE tg_birds_common_rate set trait_place={top_place} WHERE nft_id='{bird_nft_id}';")
