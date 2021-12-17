@@ -14,8 +14,8 @@ def send_message(conn, bot, db, nft_metadata, send_text, messages_list):
     try_text = False
     send_again = True
     send_attempt = 0
-    if random.random() < 0.4:
-        send_text += "\nPlease <a href='https://devpost.com/software/tools-and-apps-rmrkspybot'>vote for this Bot</a>\n"
+    # if random.random() < 0.4:
+    #     send_text += "\nPlease <a href='https://devpost.com/software/tools-and-apps-rmrkspybot'>vote for this Bot</a>\n"
     # Try to send as a photo
     while send_again and send_attempt < 10:
         send_again = False
@@ -153,7 +153,7 @@ def send_messages(bot, job):
     db.execute(
         f"DELETE FROM tg_changes_messages WHERE user_id NOT IN (SELECT id FROM tg_users WHERE is_active);")
     conn.commit()
-    db.execute(f"SELECT * FROM tg_changes_messages ORDER BY block LIMIT 10;")
+    db.execute(f"SELECT * FROM tg_changes_messages ORDER BY block LIMIT 5;")
     send_changes_messages = db.fetchall()
     for send_change_messages in send_changes_messages:
         user_id, nft_id, old_value, new_value, block, field, optype, metadata, nft_url, version = send_change_messages
@@ -215,7 +215,7 @@ def send_messages(bot, job):
     db.execute(
         f"DELETE FROM tg_forsale_messages WHERE user_id NOT IN (SELECT id FROM tg_users WHERE is_active);")
     conn.commit()
-    db.execute(f"SELECT * FROM tg_forsale_messages ORDER BY block LIMIT 10;")
+    db.execute(f"SELECT * FROM tg_forsale_messages ORDER BY block LIMIT 5;")
     send_forsale_messages = db.fetchall()
     for send_forsale_message in send_forsale_messages:
         nft_id = send_forsale_message[3]
@@ -248,20 +248,20 @@ def send_messages(bot, job):
     db.execute(
         f"DELETE FROM tg_buy_messages WHERE user_id NOT IN (SELECT id FROM tg_users WHERE is_active);")
     conn.commit()
-    db.execute(f"SELECT * FROM tg_buy_messages ORDER BY block LIMIT 10;")
+    db.execute(f"SELECT * FROM tg_buy_messages ORDER BY block LIMIT 5;")
     send_buy_messages = db.fetchall()
     for send_buy_message in send_buy_messages:
         send_buy_message = list(send_buy_message)
         send_buy_message[2] = send_buy_message[2].replace("'", "''")
         db.execute(
             f"DELETE FROM tg_buy_messages WHERE user_id={send_buy_message[0]} AND type='{send_buy_message[1]}' AND nft_id='{send_buy_message[2]}' AND block={send_buy_message[4]};")
+        conn.commit()
         nft_id = send_buy_message[2]
         send_text, nft_metadata = extract_header_info(
             db, nft_id, send_buy_message[5])
         usd_price = Decimal(send_buy_message[3]) * Decimal(ksm_exchange_rate)
         if send_buy_message[1] == "singular":
             send_text += f'<a href="{singular_market_url}{nft_id}">Singular NFT was SOLD for {send_buy_message[3]:.2f} KSM (~{usd_price:.2f}$)!</a>\n'
-            print(f"{singular_market_url}{nft_id}")
             if send_buy_message[0] > 0:
                 send_text += f'\nUnsubscribe from these messages /singular_buy ❌'
             else:
@@ -270,10 +270,16 @@ def send_messages(bot, job):
         elif send_buy_message[1] == "bird":
             send_text += f'<a href="{kanaria_market_url}{nft_id}">Kanaria Bird NFT was SOLD for {send_buy_message[3]:.2f} KSM (~{usd_price:.2f}$)!</a>\n'
             if send_buy_message[0] > 0:
-                send_text += estimate_bird(db, nft_id, "header")[0]
+                send_text += estimate_bird(db,
+                                           nft_id,
+                                           "header",
+                                           send_buy_message[4])[0]
                 send_text += f'\nUnsubscribe from these messages /birds_buy ❌'
             else:
-                send_text += estimate_bird(db, nft_id, "channel")[0]
+                send_text += estimate_bird(db,
+                                           nft_id,
+                                           "channel",
+                                           send_buy_message[4])[0]
                 send_text += f'\nMore info in @RMRKspyBot'
 
         elif send_buy_message[1] == "item":
