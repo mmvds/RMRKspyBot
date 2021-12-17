@@ -85,7 +85,7 @@ def bird_items_on_chain_block(db, nft_id, items_type, block=-1):
 # Bird price estimation
 
 
-def estimate_bird(db, nft_id, estimation_type="full"):
+def estimate_bird(db, nft_id, estimation_type="full", block=-1):
     send_text = ""
     total_birds_min, total_items_min, total_birds_max, total_items_max, total_birds_avg, total_items_avg = 0, 0, 0, 0, 0, 0
     db.execute(f"SELECT * FROM tg_birds_gems_info WHERE bird_id = '{nft_id}';")
@@ -182,7 +182,7 @@ def estimate_bird(db, nft_id, estimation_type="full"):
 
             # Calculate price of all bird items
             send_text += f"\n<b>Estimate Items price: </b>\n"
-            items_ids = bird_items_on_chain_block(db, nft_id, 'items')
+            items_ids = bird_items_on_chain_block(db, nft_id, 'items', block)
             total_items_prices = []
             for item_id in items_ids:
                 db.execute(
