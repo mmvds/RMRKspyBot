@@ -1,5 +1,5 @@
-\SET kanaria_sales_channel <kanaria_sales_channel_id>;
-\SET singular_sales_channel <singular_sales_channel_id>;
+\set kanaria_sales_channel <kanaria_sales_channel_id>;
+\set singular_sales_channel <singular_sales_channel_id>;
 
 DROP TABLE IF EXISTS tg_lastblocks;
 DROP TABLE IF EXISTS tg_users;
