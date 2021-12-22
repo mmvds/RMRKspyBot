@@ -243,8 +243,11 @@ def update_birds_gems_items(conn, db, tg_lastblock_v1, tg_lastblock_v2):
     for new_item in new_items:
         nft_metadata = fetch_metadata(db, new_item[0], new_item[1])
         if 'properties' in nft_metadata:
-            nft_rarity = nft_metadata['properties']['rarity']['value'].strip(
-            ).lower()
+            if nft_metadata['properties'].get('rarity',''):
+                nft_rarity = nft_metadata['properties']['rarity']['value'].strip(
+                ).lower()
+            else:
+                nft_rarity = 'common'
             nft_type = nft_metadata['properties']['type']['value'].strip(
             ).lower()
             nft_name = nft_metadata.get('name', '').replace("'", "''")
@@ -433,8 +436,11 @@ WHERE  t1.block > {tg_lastblock_v2} AND t1.nft_id=t3.nft_id AND t3.version = 'v2
                     [user_id, 'bird', 'limited', forsale[0], forsale[1], forsale[2], forsale[3]])
 
     for forsale in forsale_list_items:
-        forsale_rarity = fetch_metadata(db, forsale[0], forsale[3])[
-            'properties']['rarity']['value'].strip().lower()
+        if fetch_metadata(db, forsale[0], forsale[3])['properties'].get('rarity',''):
+            forsale_rarity = fetch_metadata(db, forsale[0], forsale[3])[
+                'properties']['rarity']['value'].strip().lower()
+        else:
+            forsale_rarity = 'common'
         for user_id in items_forsale_by_user:
             items_forsale = items_forsale_by_user[user_id]
             if items_forsale['any'] >= forsale[1]:
