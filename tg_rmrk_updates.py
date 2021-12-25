@@ -236,6 +236,21 @@ def update_birds_gems_items(conn, db, tg_lastblock_v1, tg_lastblock_v2):
                 f"UPDATE tg_birds_common_rate set trait_place={top_place} WHERE nft_id='{bird_nft_id}';")
         conn.commit()
 
+    # Update opened giftboxes info
+    db.execute(
+        "SELECT t1.id, t3.metadata FROM nfts_v2 t1, tg_items_info t2, nft_resources_v2 t3 WHERE t1.id LIKE '%EVNTS-YLTD21%' AND jsonb_array_length(t1.priority) > 0 AND t1.id=t2.nft_id AND t2.name='Yuletide 2021 Giftbox' AND t3.id=t1.priority::json ->> 0;")
+    new_opened_boxes = db.fetchall()
+    for new_opened_box in new_opened_boxes:
+        nft_id, nft_metadata = new_opened_box
+        db.execute(
+            f"DELETE FROM tg_nft_metadata WHERE nft_id='{nft_id}';")
+        db.execute(
+            f"DELETE FROM tg_items_info WHERE nft_id='{nft_id}';")
+        conn.commit()
+        nft_metadata = fetch_metadata(
+            db, nft_id, nft_metadata)
+    conn.commit()
+
     # Collect info for new Items to estimate
     db.execute(
         f"SELECT id, metadata FROM nfts_v2 WHERE burned != 'true' AND (collection IN ('{kanaria_items_ids_str}') OR collection IN ('{kanaria_gems_ids_str}')) AND id NOT IN (SELECT nft_id FROM tg_items_info);")
