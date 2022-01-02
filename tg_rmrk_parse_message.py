@@ -149,53 +149,66 @@ def parse_estimate_message(conn, bot, db, user_id, mt, parsed_val, msg):
         msg += "Bot will calculate the estimated price of Kanaria NFT (items or birds) based on the history of sales of similar NFTs\n"
         msg += "\nFormat:\n"
         msg += "/estimate Kanaria_Bird_or_Item_NFT_id_or_url_or_Bird_number\n"
-        msg += "e.g. /estimate_9965 /estimate_full_9965\n"
+        msg += "e.g. /estimate_7952 /estimate_full_7952\n"
         msg += '\n<a href="https://medium.com/@rybvic/kanaria-nft-price-estimation-be82c2976958">How it works</a>\n'
     elif '/estimate' in mt:
+        print(user_id, mt)
         if '/estimate_full' in mt:
             estimation_type = 'full'
             mt = mt.replace('/estimate_full', '/estimate')
         else:
             estimation_type = 'short'
         estimate_id = mt[10:].strip().split("/")[-1].replace("'", "''")
-        if parsed_val > 0 and parsed_val < 10000:
+        if parsed_val > 0 and parsed_val < 10000 and len(mt) < 50:
             db.execute(
-                f"select id from nfts_v2 where collection='{kanaria_birds_ids_str}' and sn::int = {parsed_val};")
+                f"SELECT id FROM nfts_v2 WHERE collection='{kanaria_birds_ids_str}' and sn::int = {parsed_val};")
             if db.rowcount > 0:
                 estimate_id = db.fetchone()[0]
         db.execute(
-            f"SELECT rarity, type, name FROM tg_items_info WHERE nft_id = '{estimate_id}';")
+            f"SELECT id FROM nfts_v2 WHERE rootowner='{estimate_id}';")
         if db.rowcount > 0:
-            estimate_type = 'item'
-            nft_rarity, nft_type, nft_name = db.fetchone()
-            nft_name = nft_name.replace("'", "''")
-            db.execute(
-                f"SELECT metadata FROM nfts_v2 WHERE id = '{estimate_id}';")
-            send_text, nft_metadata = extract_header_info(
-                db, estimate_id, db.fetchone()[0])
-            send_text += estimate_item(db, nft_rarity, nft_type, nft_name)[0]
-            send_message(
-                conn, bot, db, nft_metadata, send_text, [
-                    user_id, estimate_id])
-            conn.commit()
+            send_message_only(
+                    conn, bot, db, "It may take a few seconds, please wait...", user_id)
+            send_text = estimate_wallet(db, estimate_id, estimation_type)[0]
+            send_message_only(
+                    conn, bot, db, send_text, user_id)
             return
-
         else:
             db.execute(
-                f"SELECT * FROM tg_birds_info WHERE nft_id = '{estimate_id}';")
+                f"SELECT rarity, type, name FROM tg_items_info WHERE nft_id = '{estimate_id}';")
             if db.rowcount > 0:
-                estimate_type = 'bird'
+                #Estimate item
+                nft_rarity, nft_type, nft_name = db.fetchone()
+                nft_name = nft_name.replace("'", "''")
+                db.execute(
+                    f"SELECT metadata FROM nfts_v2 WHERE id = '{estimate_id}';")
                 send_text, nft_metadata = extract_header_info(
                     db, estimate_id, db.fetchone()[0])
-                send_text += estimate_bird(db, estimate_id, estimation_type)[0]
+                send_text += estimate_item(db, nft_rarity, nft_type, nft_name)[0]
                 send_message(
                     conn, bot, db, nft_metadata, send_text, [
                         user_id, estimate_id])
                 conn.commit()
                 return
+
             else:
-                msg += "Can't find Kanaria NFT item!\n"
-                msg += "Please use the following format:\n/estimate Kanaria_Bird_or_Item_NFT_id_or_url\n"
+                db.execute(
+                    f"SELECT * FROM tg_birds_info WHERE nft_id = '{estimate_id}';")
+                if db.rowcount > 0:
+                    #Estimate bird
+                    db.execute(
+                        f"SELECT metadata FROM nfts_v2 WHERE id = '{estimate_id}';")
+                    send_text, nft_metadata = extract_header_info(
+                        db, estimate_id, db.fetchone()[0])
+                    send_text += estimate_bird(db, estimate_id, estimation_type)[0]
+                    send_message(
+                        conn, bot, db, nft_metadata, send_text, [
+                            user_id, estimate_id])
+                    conn.commit()
+                    return
+                else:
+                    msg += "Can't find Kanaria NFT item!\n"
+                    msg += "Please use the following format:\n/estimate Kanaria_Bird_or_Item_NFT_id_or_url\n"
     return msg
 
 
