@@ -2,6 +2,7 @@ import re
 from tg_rmrk_collections import *
 from tg_rmrk_datatools import to_ksm
 from tg_rmrk_config import *
+from decimal import Decimal
 
 # Find twin birds
 
@@ -23,7 +24,7 @@ def find_twin_birds(db, nft_id):
 def estimate_item(db, nft_rarity, nft_type, nft_name):
     nft_name = nft_name.replace("'", "''")
     db.execute(
-        f"SELECT old::bigint FROM nft_changes_v2 WHERE optype = 'BUY' AND field='forsale' AND nft_id IN (SELECT nft_id FROM tg_items_info WHERE rarity = '{nft_rarity}' AND type = '{nft_type}');")
+        f"SELECT old::bigint FROM nft_changes_v2 WHERE optype = 'BUY' AND field='forsale' AND nft_id IN (SELECT nft_id FROM tg_items_info WHERE rarity = '{nft_rarity}' AND type = '{nft_type}') ORDER BY block DESC limit 20;")
     if db.rowcount > 0:
         rarity_type_prices = [x[0] for x in db.fetchall()]
         rarity_type_prices_min, rarity_type_prices_max = to_ksm(
@@ -34,7 +35,7 @@ def estimate_item(db, nft_rarity, nft_type, nft_name):
     else:
         rarity_type_prices_min, rarity_type_prices_max, rarity_type_prices_avg = 0, 0, 0
     db.execute(
-        f"SELECT old::bigint FROM nft_changes_v2 WHERE optype = 'BUY' AND field='forsale' AND nft_id IN (SELECT nft_id FROM tg_items_info WHERE rarity = '{nft_rarity}' AND type = '{nft_type}' AND name = '{nft_name}');")
+        f"SELECT old::bigint FROM nft_changes_v2 WHERE optype = 'BUY' AND field='forsale' AND nft_id IN (SELECT nft_id FROM tg_items_info WHERE rarity = '{nft_rarity}' AND type = '{nft_type}' AND name = '{nft_name}') ORDER BY block DESC limit 5;")
     if db.rowcount > 0:
         rarity_type_name_prices = [x[0] for x in db.fetchall()]
         rarity_type_name_prices_min, rarity_type_name_prices_max = to_ksm(
@@ -225,5 +226,69 @@ def estimate_bird(db, nft_id, estimation_type="full", block=-1):
                     send_text += f"/estimate_full_{twin_bird}"
                 send_text += '\n'
 
-    return send_text, total_birds_min + total_items_min, total_birds_max + \
-        total_items_max, total_birds_avg + total_items_avg
+    return send_text, total_birds_min, total_birds_max, serial_number
+
+# Wallet price estimation
+
+def estimate_wallet(db, address, estimation_type='short'):
+    send_text = ""
+    total_wallet_min, total_wallet_max = 0, 0
+    total_birds_min, total_birds_max = 0, 0
+    total_items_min, total_items_max = 0, 0
+    db.execute(
+            f"SELECT 1 WHERE '{address}' in (SELECT rootowner FROM (SELECT rootowner,count(*) c FROM nfts_v2 WHERE id LIKE '%KANBIRD%' GROUP BY rootowner ORDER BY c DESC LIMIT 20) AS t1);")
+    if db.rowcount > 0:
+        send_text += "This wallet in TOP 20. Please don't do that, it can make our bot suffer.\n"
+        return send_text, total_wallet_min, total_wallet_max
+
+    db.execute("SELECT * FROM tg_ksm_exchange_rate")
+    ksm_exchange_rate = db.fetchone()[0]
+    
+    #Estimate Birds
+    db.execute(
+            f"SELECT id FROM nfts_v2 WHERE rootowner='{address}' AND collection IN ('{kanaria_birds_ids_str}') AND burned!='true';")
+    if db.rowcount > 0:
+        send_text += "<b>Birds + Gems:</b>\n"
+        wallet_birds = db.fetchall()
+        for wallet_bird in wallet_birds:
+            bird_min, bird_max, bird_sn = estimate_bird(db, wallet_bird[0])[1:]
+            total_birds_min += bird_min
+            total_birds_max += bird_max
+            if estimation_type=='full':
+                send_text += f"<a href='{kanaria_market_url}{wallet_bird[0]}'>Bird_{bird_sn}</a> {bird_min:.2f} - {bird_max:.2f} KSM\n"
+        send_text += f"Min: <b>{total_birds_min:.2f}</b> (~{Decimal(total_birds_min) * Decimal(ksm_exchange_rate):.2f}$) Max <b>{total_birds_max:.2f}</b> (~{Decimal(total_birds_max) * Decimal(ksm_exchange_rate):.2f}$) KSM\n"
+    
+    #Estimate Items
+    db.execute(
+            f"SELECT id FROM nfts_v2 WHERE rootowner='{address}' AND collection IN ('{kanaria_items_ids_str}') AND burned!='true';")
+    if db.rowcount > 0:
+        send_text += "\n<b>Items:</b>\n"
+        wallet_items = db.fetchall()
+        for wallet_item in wallet_items:
+            db.execute(
+                    f"SELECT rarity, type, name FROM tg_items_info WHERE nft_id = '{wallet_item[0]}';")
+            item_rarity, item_type, item_name = db.fetchone()
+            item_min, item_max = estimate_item(
+                db, item_rarity, item_type, item_name)[1:3]
+            total_items_min += item_min
+            total_items_max += item_max
+            if estimation_type=='full':
+                item_name = item_name.replace("'", "''")
+                if total_items_min > 0:
+                    send_text += f"<a href='{kanaria_market_url}{wallet_item[0]}'>{item_name}</a> {item_min:.2f} - {item_max:.2f} KSM\n"
+                else:
+                    send_text += f"<a href='{kanaria_market_url}{wallet_item[0]}'>{item_name}</a> Can't estimate\n"
+        send_text += f"Min: <b>{total_items_min:.2f}</b> (~{Decimal(total_items_min) * Decimal(ksm_exchange_rate):.2f}$) Max <b>{total_items_max:.2f}</b> (~{Decimal(total_items_max) * Decimal(ksm_exchange_rate):.2f}$) KSM\n"
+    total_wallet_min, total_wallet_max = total_birds_min + total_items_min, total_birds_max + total_birds_max
+    send_text += "\n<b>Total:</b>\n"
+    send_text += f"Min: <b>{total_wallet_min:.2f}</b> (~{Decimal(total_wallet_min) * Decimal(ksm_exchange_rate):.2f}$) Max <b>{total_wallet_max:.2f}</b> (~{Decimal(total_wallet_max) * Decimal(ksm_exchange_rate):.2f}$) KSM\n"
+    
+    send_text += f"\n<a href='{sub_id_url}{address}'>Sub ID</a> | <a href='{kanaria_nest_url}{address}'>Kanaria</a>\n"
+    if estimation_type != 'full':
+        send_text += f'/estimate_full_{address}'
+    else:
+        send_text += f'/estimate_{address}'
+    if len(send_text) >= 4096:
+        send_text = f"The message is too long, please use a shorter version:\n/estimate_{address}"
+
+    return send_text, total_wallet_min, total_wallet_max
