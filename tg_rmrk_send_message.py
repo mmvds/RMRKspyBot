@@ -7,6 +7,28 @@ from tg_rmrk_estimation import *
 from tg_rmrk_config import *
 from telegram import ParseMode, ReplyKeyboardMarkup
 
+
+# Send message only
+
+def send_message_only(conn, bot, db, send_text, user_id):
+    try:
+        bot.send_message(
+            chat_id=user_id,
+            text=send_text,
+            parse_mode=ParseMode.HTML)
+    except Exception as e:
+        print(
+            time.ctime(),
+            round(
+                time.time()),
+            str(send_text),
+            e)
+        if ('blocked by the user' in str(e)) or (
+                'user is deactivated' in str(e)):
+            db.execute(
+                    f'UPDATE tg_users SET is_active=False WHERE id={user_id};')
+            conn.commit()
+
 # Send message
 
 
@@ -67,7 +89,8 @@ def send_message(conn, bot, db, nft_metadata, send_text, messages_list):
                         send_attempt += 1
                     elif ('blocked by the user' in str(e)) or ('user is deactivated' in str(e)):
                         db.execute(
-                            f'UPDATE tg_users set is_active=False where id={messages_list[0]};')
+                            f'UPDATE tg_users SET is_active=False WHERE id={messages_list[0]};')
+                        conn.commit()
                     else:
                         try_text = True
         else:
@@ -92,8 +115,8 @@ def send_message(conn, bot, db, nft_metadata, send_text, messages_list):
             if ('blocked by the user' in str(e)) or (
                     'user is deactivated' in str(e)):
                 db.execute(
-                    f'update tg_users set is_active=False where id={messages_list[0]};')
-
+                    f'UPDATE tg_users SET is_active=False WHERE id={messages_list[0]};')
+                conn.commit()
 # Send record message to record channel
 
 
@@ -153,7 +176,7 @@ def send_messages(bot, job):
     db.execute(
         f"DELETE FROM tg_changes_messages WHERE user_id NOT IN (SELECT id FROM tg_users WHERE is_active);")
     conn.commit()
-    db.execute(f"SELECT * FROM tg_changes_messages ORDER BY block LIMIT 5;")
+    db.execute(f"SELECT * FROM tg_changes_messages ORDER BY block LIMIT 10;")
     send_changes_messages = db.fetchall()
     for send_change_messages in send_changes_messages:
         user_id, nft_id, old_value, new_value, block, field, optype, metadata, nft_url, version = send_change_messages
@@ -210,12 +233,14 @@ def send_messages(bot, job):
             send_text,
             send_change_messages)
         conn.commit()
+        if send_change_messages[0] < 0:
+            time.sleep(1)
 
     # Send listed NFTs messages
     db.execute(
         f"DELETE FROM tg_forsale_messages WHERE user_id NOT IN (SELECT id FROM tg_users WHERE is_active);")
     conn.commit()
-    db.execute(f"SELECT * FROM tg_forsale_messages ORDER BY block LIMIT 5;")
+    db.execute(f"SELECT * FROM tg_forsale_messages ORDER BY block LIMIT 10;")
     send_forsale_messages = db.fetchall()
     for send_forsale_message in send_forsale_messages:
         nft_id = send_forsale_message[3]
@@ -243,12 +268,14 @@ def send_messages(bot, job):
             send_text,
             send_forsale_message)
         conn.commit()
+        if send_forsale_message[0] < 0:
+            time.sleep(1)
 
     # Send sold NFTs messages
     db.execute(
         f"DELETE FROM tg_buy_messages WHERE user_id NOT IN (SELECT id FROM tg_users WHERE is_active);")
     conn.commit()
-    db.execute(f"SELECT * FROM tg_buy_messages ORDER BY block LIMIT 5;")
+    db.execute(f"SELECT * FROM tg_buy_messages ORDER BY block LIMIT 10;")
     send_buy_messages = db.fetchall()
     for send_buy_message in send_buy_messages:
         send_buy_message = list(send_buy_message)
@@ -296,4 +323,6 @@ def send_messages(bot, job):
 
         send_message(conn, bot, db, nft_metadata, send_text, send_buy_message)
         conn.commit()
+        if send_buy_message[0] < 0:
+            time.sleep(1)
     conn.close()
